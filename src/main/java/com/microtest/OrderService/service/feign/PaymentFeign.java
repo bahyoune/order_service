@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "payment-service")
 public interface PaymentFeign {
 
-    @GetMapping("/payment/{productId}/availability")
+    @GetMapping("/api/v1/payment/{productId}/availability")
     ResponseEntity<Boolean> getTestPayment(@PathVariable("productId") String productId);
 
 }
