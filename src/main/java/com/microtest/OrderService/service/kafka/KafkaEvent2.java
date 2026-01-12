@@ -11,9 +11,9 @@ public class KafkaEvent2 {
     @Value("${app.kafka.topic.order}")
     private String topic;
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
 
-    public KafkaEvent2(KafkaTemplate<String, Object> kafkaTemplate) {
+    public KafkaEvent2(KafkaTemplate<String, OrderEvent> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 

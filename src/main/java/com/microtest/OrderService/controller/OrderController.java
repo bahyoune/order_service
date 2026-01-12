@@ -12,7 +12,7 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/internal/v1/orders")
 @RefreshScope
 public class OrderController {
 
@@ -37,8 +37,9 @@ public class OrderController {
         return orderService.createOrder(productId);
     }
 
-    @PostMapping("/{productId}/feign0")
+    @PostMapping("/feign0/{productId}")
     public String createPayment(@PathVariable String productId) {
+        System.out.println("enter");
         return payment0Service.createPayment(productId);
     }
 
