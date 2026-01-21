@@ -1,5 +1,6 @@
 package com.microtest.OrderService.service.feign;
 
+import com.microtest.event.PaymentStatusEvent;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,5 +11,8 @@ public interface PaymentFeign {
 
     @GetMapping("/internal/v1/payment/{productId}/availability")
     ResponseEntity<Boolean> getTestPayment(@PathVariable("productId") String productId);
+
+    @GetMapping("/internal/v1/payment/{orderId}")
+    PaymentStatusEvent getPaymentStatus(@PathVariable Long orderId);
 
 }

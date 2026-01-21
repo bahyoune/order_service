@@ -2,8 +2,10 @@ package com.microtest.OrderService.bean;
 
 import com.microtest.OrderService.enums.OrderStatus;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Date;
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.List;
 @Builder
 @Entity
 @Table(name = "ORDERS")
+@NoArgsConstructor
+@AllArgsConstructor
 public class Orders {
 
     private static final long serialVersionID = 1L;

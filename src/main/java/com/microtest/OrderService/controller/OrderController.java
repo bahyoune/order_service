@@ -1,15 +1,18 @@
 package com.microtest.OrderService.controller;
 
 
+import com.microtest.OrderService.bean.Orders;
+import com.microtest.event.OrderCreateEvent;
 import com.microtest.event.OrderEvent;
 import com.microtest.OrderService.service.OrderService;
-import com.microtest.OrderService.service.feign.Payment0Service;
-import com.microtest.OrderService.service.kafka.KafkaEvent1;
-import com.microtest.OrderService.service.kafka.KafkaEvent2;
+import com.microtest.OrderService.service.feign.PaymentFeignService;
+import com.microtest.event.PaymentStatusEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/internal/v1/orders")
@@ -20,41 +23,52 @@ public class OrderController {
     private OrderService orderService;
 
     @Autowired
-    private Payment0Service payment0Service;
-
-    @Autowired
-    private KafkaEvent1 kafkaEvent1;
-
-    @Autowired
-    private KafkaEvent2 kafkaEvent2;
+    private PaymentFeignService paymentFeignService;
 
 
     @Value("${custom.msg}")
     private String keyFix;
 
-    @PostMapping("/{productId}")
-    public String placePayment(@PathVariable String productId) {
-        return orderService.createOrder(productId);
-    }
 
-    @PostMapping("/feign0/{productId}")
+    //Test of Feign message without a circuit breaker
+    //if productId = check, order placed : order cancel
+    //Data is not persist in database
+    @PostMapping("/feign/{productId}")
     public String createPayment(@PathVariable String productId) {
-        System.out.println("enter");
-        return payment0Service.createPayment(productId);
+        return paymentFeignService.createPayment(productId);
     }
 
-    @PostMapping("/send")
-    public String sendEvent(@RequestBody String msg) {
-        kafkaEvent1.sendEvent(msg);
-        return "✅ Service A sent: " + msg;
+    //Feign message with circuit breaker, retry and time limiter
+    @GetMapping("/{id}/payment-status")
+    public CompletableFuture<PaymentStatusEvent> paymentStatus(@PathVariable Long id) {
+        return paymentFeignService.getPaymentStatus(id);
     }
 
+
+
+
+    //Test for Kafka message is working
+    //if orderid = 1, trigger DLT error
+    //Data is not persist in database
     @PostMapping("/order")
     public String sendEvent(@RequestBody OrderEvent msg) {
-        kafkaEvent2.sendOrder(msg);
+        orderService.sendOrder(msg);
         return "✅ Service A sent: " + msg;
     }
 
+    //Saga Pattern for Kafka
+    //if Order is create check
+    //Payment  confirm, and send an event to confirm the order
+    //Payment failed, send an event to cancel the order
+    //amount > 500 ? Payment confirm : Payment Failed
+    //Data in database
+    @PostMapping("/saga")
+    public String sendEvent(@RequestBody OrderCreateEvent msg) {
+        Orders od = orderService.createOrder(msg.userId(), msg.amount());
+        return "✅ Service A sent: " + od.toString();
+    }
+
+    //Show fixed response
     @GetMapping("/msg")
     public String showMsg() {
         return keyFix;
