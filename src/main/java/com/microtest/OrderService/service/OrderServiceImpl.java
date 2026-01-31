@@ -5,15 +5,20 @@ import com.microtest.OrderService.enums.OrderStatus;
 import com.microtest.OrderService.repo.OrderRepository;
 import com.microtest.event.OrderCreateEvent;
 import com.microtest.event.OrderEvent;
+import com.microtest.event.PaymentStatusEvent;
+import com.microtest.event.PaymentSuccessEvent;
+import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+
+import java.util.concurrent.CompletableFuture;
 
 
 @Service
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
 
@@ -37,36 +42,77 @@ public class OrderServiceImpl implements OrderService {
 
     //</editor-fold>
 
+    //<editor-fold defaultState="collapsed" desc="Saga -> Payment : Success or Failed">
+    @Transactional
+    public void handlePaymentSuccess(PaymentStatusEvent event) {
+
+        Orders order = orderRepository.findById(event.OrderId())
+                .orElseThrow();
+
+        order.setStatus(OrderStatus.CONFIRMED);
+        orderRepository.save(order);
+
+        log.info("Order {} marked as PAID", order.getId());
+    }
+
+    @Transactional
+    public void handlePaymentFailed(PaymentStatusEvent event) {
+
+        Orders order = orderRepository.findById(event.OrderId())
+                .orElseThrow();
+
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+
+        log.error("Order {} CANCELLED due to payment failure, reason: {}", order.getId(), event.reason());
+    }
+//</editor-fold>
+
     //<editor-fold defaultState="collapsed" desc="Test simple for Kafka event">
     //if pass, send success
     //else send DLT error message
-    public void sendOrder(OrderEvent event) {
-//        kafkaTemplate.send
-        kafkaTemplate.send(topic, event.getOrderId(), event)
-                .whenComplete((result, ex) ->{
-                    if(ex == null) {
-                        System.out.println("📤 Sent: " + event);
-                    }else {
-                        System.err.println("❌ Failed to send event: " + ex.getMessage());
-                    }
-                });
+    public CompletableFuture<PaymentStatusEvent> sendOrder(OrderEvent event) {
+        return kafkaTemplate.send(topic1, event.getOrderId(), event)
+                .thenApply(result -> PaymentStatusEvent.builder()
+                        .OrderId(Long.valueOf(event.getOrderId()))
+                        .reason("📤 Payment event published successfully")
+                        .build()
 
+                )
+                .exceptionally(ex -> PaymentStatusEvent.builder()
+                        .OrderId(Long.valueOf(event.getOrderId()))
+                        .reason("❌ Failed to publish payment event: " + ex.getMessage())
+                        .build()
+                );
 
     }
     //</editor-fold>
 
     //<editor-fold defaultState="collapsed" desc="Saga Pattern of Kafka">
-    public Orders createOrder(String userId, double amount) {
-        Orders order = new Orders();
-        order.setUserId(userId);
-        order.setAmount(amount);
-        order.setStatus(OrderStatus.CREATED);
+    public CompletableFuture<PaymentStatusEvent> createOrder(String userId, double amount) {
+        Orders order = Orders.builder()
+                .userId(userId)
+                .amount(amount)
+                .status(OrderStatus.CREATED).build();
 
-        orderRepository.save(order);
+        order = orderRepository.save(order);
 
-        kafkaTemplate.send(topic1, order.getId().toString(), new OrderCreateEvent(order.getId(), userId,amount));
+        Orders finalOrder = order;
 
-        return order;
+        return kafkaTemplate.send(topic, order.getId().toString(), OrderCreateEvent.builder()
+                        .orderId(order.getId())
+                        .userId(userId)
+                        .amount(amount).build())
+                .thenApply(result -> PaymentStatusEvent.builder()
+                        .OrderId(finalOrder.getId())
+                        .reason("📤 Payment event published successfully")
+                        .build()
+                )
+                .exceptionally(ex -> PaymentStatusEvent.builder()
+                        .OrderId(finalOrder.getId())
+                        .reason("❌ Failed to publish payment event: " + ex.getMessage())
+                        .build()
+                );
     }
     //</editor-fold>
 

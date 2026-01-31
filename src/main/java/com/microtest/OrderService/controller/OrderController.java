@@ -48,12 +48,11 @@ public class OrderController {
 
 
     //Test for Kafka message is working
-    //if orderid = 1, trigger DLT error
+    //if orderId = 1, trigger DLT error
     //Data is not persist in database
     @PostMapping("/order")
-    public String sendEvent(@RequestBody OrderEvent msg) {
-        orderService.sendOrder(msg);
-        return "✅ Service A sent: " + msg;
+    public CompletableFuture<PaymentStatusEvent> sendEvent(@RequestBody OrderEvent msg) {
+      return   orderService.sendOrder(msg);
     }
 
     //Saga Pattern for Kafka
@@ -63,9 +62,8 @@ public class OrderController {
     //amount > 500 ? Payment confirm : Payment Failed
     //Data in database
     @PostMapping("/saga")
-    public String sendEvent(@RequestBody OrderCreateEvent msg) {
-        Orders od = orderService.createOrder(msg.userId(), msg.amount());
-        return "✅ Service A sent: " + od.toString();
+    public CompletableFuture<PaymentStatusEvent> sendEvent(@RequestBody OrderCreateEvent msg) {
+        return orderService.createOrder(msg.userId(), msg.amount());
     }
 
     //Show fixed response

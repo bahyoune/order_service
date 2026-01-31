@@ -2,11 +2,19 @@ package com.microtest.OrderService.service;
 
 import com.microtest.OrderService.bean.Orders;
 import com.microtest.event.OrderEvent;
+import com.microtest.event.PaymentStatusEvent;
+import com.microtest.event.PaymentSuccessEvent;
+
+import java.util.concurrent.CompletableFuture;
 
 public interface OrderService {
 
 
-    void sendOrder(OrderEvent event);
+    void handlePaymentSuccess(PaymentStatusEvent event);
 
-    Orders createOrder(String userId, double amount);
+    void handlePaymentFailed(PaymentStatusEvent event);
+
+    CompletableFuture<PaymentStatusEvent> sendOrder(OrderEvent event);
+
+    CompletableFuture<PaymentStatusEvent> createOrder(String userId, double amount);
 }

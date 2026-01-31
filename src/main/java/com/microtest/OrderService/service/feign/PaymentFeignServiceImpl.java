@@ -49,7 +49,7 @@ public class PaymentFeignServiceImpl implements PaymentFeignService {
     private CompletableFuture<PaymentStatusEvent> paymentFallback(
             Long orderId, Throwable ex) {
         return CompletableFuture.completedFuture(
-                new PaymentStatusEvent(orderId, "UNKNOWN")
+                new PaymentStatusEvent(orderId, "Service not available")
         );
     }
     //</editor-fold>
