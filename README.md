@@ -36,8 +36,8 @@ Client
 API Gateway
   ↓
 Order Service
-   ├─ (Sync / Feign + Resilience) → Other Services
-   └─ (Async / Kafka) → Payment Service
+   ├─ (Sync / Feign + Resilience) -> Other Services
+   └─ (Async / Kafka) -> Payment Service
 ```
 
 ---
@@ -78,7 +78,7 @@ Protects the system from repeated failures.
 Example behavior:
 
 ```
-Service down → Circuit OPEN → Fallback triggered
+Service down -> Circuit OPEN -> Fallback triggered
 ```
 
 ---
@@ -172,8 +172,8 @@ The Order Service acts as the **Saga Orchestrator**.
 1. Create Order (PENDING)
 2. Publish OrderCreatedEvent
 3. Wait for Payment Result
-   ├─ SUCCESS → Confirm Order
-   └─ FAILURE → Compensate Order
+   ├─ SUCCESS -> Confirm Order
+   └─ FAILURE -> Compensate Order
 ```
 
 ---
