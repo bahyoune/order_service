@@ -37,17 +37,14 @@ public class OrderServiceImpl implements OrderService {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    //<editor-fold defaultState="collapsed" desc="Change, Forgot Password">
-
-
+    //<editor-fold defaultState="collapsed" desc="">
     //</editor-fold>
 
     //<editor-fold defaultState="collapsed" desc="Saga -> Payment : Success or Failed">
     @Transactional
     public void handlePaymentSuccess(PaymentStatusEvent event) {
 
-        Orders order = orderRepository.findById(event.OrderId())
-                .orElseThrow();
+        Orders order = orderRepository.findById(event.OrderId()).orElseThrow();
 
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
@@ -58,30 +55,32 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void handlePaymentFailed(PaymentStatusEvent event) {
 
-        Orders order = orderRepository.findById(event.OrderId())
-                .orElseThrow();
+        Orders order = orderRepository.findById(event.OrderId()).orElseThrow();
 
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
 
-        log.error("Order {} CANCELLED due to payment failure, reason: {}", order.getId(), event.reason());
+        log.warn("Order {} CANCELLED due to payment failure, reason: {}", order.getId(), event.reason());
     }
 //</editor-fold>
 
     //<editor-fold defaultState="collapsed" desc="Test simple for Kafka event">
     //if pass, send success
     //else send DLT error message
-    public CompletableFuture<PaymentStatusEvent> sendOrder(OrderEvent event) {
+    // ---------------------
+    //old_clean_code: sendOrder
+    //new_clean_code: publishOrderInKafka
+    public CompletableFuture<PaymentStatusEvent> publishOrderInKafka(OrderEvent event) {
         return kafkaTemplate.send(topic1, event.getOrderId(), event)
                 .thenApply(result -> PaymentStatusEvent.builder()
                         .OrderId(Long.valueOf(event.getOrderId()))
-                        .reason("📤 Payment event published successfully")
+                        .reason("📤 Order event published successfully")
                         .build()
 
                 )
                 .exceptionally(ex -> PaymentStatusEvent.builder()
                         .OrderId(Long.valueOf(event.getOrderId()))
-                        .reason("❌ Failed to publish payment event: " + ex.getMessage())
+                        .reason("❌ Failed to publish Order event: " + ex.getMessage())
                         .build()
                 );
 
@@ -89,7 +88,9 @@ public class OrderServiceImpl implements OrderService {
     //</editor-fold>
 
     //<editor-fold defaultState="collapsed" desc="Saga Pattern of Kafka">
-    public CompletableFuture<PaymentStatusEvent> createOrder(String userId, double amount) {
+    //old_clean_code: createOrder
+    //new_clean_code: createOrderWithSagaPattern
+    public CompletableFuture<PaymentStatusEvent> createOrderWithSagaPattern(String userId, double amount) {
         Orders order = Orders.builder()
                 .userId(userId)
                 .amount(amount)
@@ -105,12 +106,12 @@ public class OrderServiceImpl implements OrderService {
                         .amount(amount).build())
                 .thenApply(result -> PaymentStatusEvent.builder()
                         .OrderId(finalOrder.getId())
-                        .reason("📤 Payment event published successfully")
+                        .reason("📤 Order event with saga pattern published successfully")
                         .build()
                 )
                 .exceptionally(ex -> PaymentStatusEvent.builder()
                         .OrderId(finalOrder.getId())
-                        .reason("❌ Failed to publish payment event: " + ex.getMessage())
+                        .reason("❌ Failed to publish order  event with saga pattern: " + ex.getMessage())
                         .build()
                 );
     }

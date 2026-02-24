@@ -11,21 +11,22 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.CompletableFuture;
 
 
+//old_clean_code: PaymentFeignServiceImpl
+//new_clean_code: OrderFeignServiceImpl
 @Service
-public class PaymentFeignServiceImpl implements PaymentFeignService {
+public class OrderFeignServiceImpl implements OrderFeignService {
 
     @Autowired
     private PaymentFeign paymentClient;
 
-    //<editor-fold defaultState="collapsed" desc="Change, Forgot Password">
-
-
+    //<editor-fold defaultState="collapsed" desc="">
     //</editor-fold>
 
     //<editor-fold defaultState="collapsed" desc="Test simple of feign communication">
-    public String createPayment(String productId) {
-
-        ResponseEntity<Boolean> available = paymentClient.getTestPayment(productId);
+    //old_clean_code: createPayment
+    //new_clean_code: findOrderForProductExist
+    public String findOrderForProductExist(String productId) {
+        ResponseEntity<Boolean> available = paymentClient.isIdPaymentExist(productId);
 
         if (Boolean.TRUE.equals(available.getBody())) {
             return "Order placed successfully for " + productId;
@@ -37,19 +38,25 @@ public class PaymentFeignServiceImpl implements PaymentFeignService {
 
 
     //<editor-fold defaultState="collapsed" desc="Feign communication with circuit breaker">
-    @CircuitBreaker(name = "paymentService", fallbackMethod = "paymentFallback")
-    @Retry(name = "paymentService")
-    @TimeLimiter(name = "paymentService")
+    //old_clean_code: paymentService
+    //new_clean_code: paymentStatus
+    @CircuitBreaker(name = "paymentStatus", fallbackMethod = "paymentStatusFallback")
+    @Retry(name = "paymentStatus")
+    @TimeLimiter(name = "paymentStatus")
     public CompletableFuture<PaymentStatusEvent> getPaymentStatus(Long orderId) {
         return CompletableFuture.supplyAsync(() ->
                 paymentClient.getPaymentStatus(orderId)
         );
     }
 
-    private CompletableFuture<PaymentStatusEvent> paymentFallback(
+    //old_clean_code: paymentFallback
+    //new_clean_code: paymentStatusFallback
+    private CompletableFuture<PaymentStatusEvent> paymentStatusFallback(
             Long orderId, Throwable ex) {
+        //old_clean_code: Service not available
+        //new_clean_code: Payment Service not available
         return CompletableFuture.completedFuture(
-                new PaymentStatusEvent(orderId, "Service not available")
+                new PaymentStatusEvent(orderId, "Payment Service not available")
         );
     }
     //</editor-fold>

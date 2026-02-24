@@ -21,7 +21,7 @@ public class Orders {
     private static final long serialVersionID = 1L;
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String userId;

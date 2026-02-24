@@ -14,7 +14,7 @@ public interface OrderService {
 
     void handlePaymentFailed(PaymentStatusEvent event);
 
-    CompletableFuture<PaymentStatusEvent> sendOrder(OrderEvent event);
+    CompletableFuture<PaymentStatusEvent> publishOrderInKafka(OrderEvent event);
 
-    CompletableFuture<PaymentStatusEvent> createOrder(String userId, double amount);
+    CompletableFuture<PaymentStatusEvent> createOrderWithSagaPattern(String userId, double amount);
 }
