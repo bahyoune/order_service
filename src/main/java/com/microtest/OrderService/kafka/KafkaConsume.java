@@ -1,9 +1,8 @@
-package com.microtest.OrderService.service.kafka;
+package com.microtest.OrderService.kafka;
 
 
 import com.microtest.OrderService.service.OrderService;
 import com.microtest.event.PaymentStatusEvent;
-import com.microtest.event.PaymentSuccessEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -16,7 +15,7 @@ public class KafkaConsume {
     private OrderService orderService;
 
     @KafkaListener(topics = "${app.kafka.topic.paymentSuccess}", groupId = "${spring.kafka.consumer.group-id}")
-    public void handlePaymentSuccess(PaymentStatusEvent event) {
+    public void handlePaymentSuccess(PaymentStatusEvent event)  {
         orderService.handlePaymentSuccess(event);
     }
 

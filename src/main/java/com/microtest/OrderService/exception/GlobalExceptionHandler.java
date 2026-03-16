@@ -1,4 +1,4 @@
-package com.microtest.OrderService.handlingError;
+package com.microtest.OrderService.exception;
 
 
 import org.springframework.http.HttpStatus;

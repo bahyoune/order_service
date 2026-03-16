@@ -1,11 +1,9 @@
 package com.microtest.OrderService.service;
 
-import com.microtest.OrderService.bean.Orders;
+import com.microtest.OrderService.exception.KafkaErrorPublishException;
+import com.microtest.event.OrderCreateEvent;
 import com.microtest.event.OrderEvent;
 import com.microtest.event.PaymentStatusEvent;
-import com.microtest.event.PaymentSuccessEvent;
-
-import java.util.concurrent.CompletableFuture;
 
 public interface OrderService {
 
@@ -14,7 +12,7 @@ public interface OrderService {
 
     void handlePaymentFailed(PaymentStatusEvent event);
 
-    CompletableFuture<PaymentStatusEvent> publishOrderInKafka(OrderEvent event);
+    PaymentStatusEvent publishOrderInKafka(OrderEvent event) throws KafkaErrorPublishException;
 
-    CompletableFuture<PaymentStatusEvent> createOrderWithSagaPattern(String userId, double amount);
+    PaymentStatusEvent createOrderWithSagaPattern(OrderCreateEvent event) throws KafkaErrorPublishException;
 }

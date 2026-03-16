@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy jar + agent
 # Agent is use for Observability
-COPY target/OrderService-0.0.1-SNAPSHOT.jar app.jar
+COPY target/OrderService-3.0.1-SNAPSHOT.jar app.jar
 COPY opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
 
 

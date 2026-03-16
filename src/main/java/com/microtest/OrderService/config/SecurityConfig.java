@@ -1,22 +1,14 @@
-package com.microtest.OrderService.config.jwt;
+package com.microtest.OrderService.config;
 
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 
 @Configuration
@@ -31,7 +23,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for simplicity
                 .authorizeHttpRequests(auth -> auth
                                 .requestMatchers("/actuator/**").permitAll()
-                                .requestMatchers("/api/v1/orders/**").hasAnyRole("USER","ADMIN")
+
+                                .requestMatchers("/internal/v1/orders/**").hasAnyRole("USER","ADMIN")
+
                                 .anyRequest().authenticated() // Require authentication for /auth/user/**
                 )
                 .oauth2ResourceServer(oauth2 ->
@@ -49,7 +43,7 @@ public class SecurityConfig {
         JwtGrantedAuthoritiesConverter converter =
                 new JwtGrantedAuthoritiesConverter();
 
-        converter.setAuthorityPrefix(""); // already ROLE_
+        converter.setAuthorityPrefix("ROLE_");
         converter.setAuthoritiesClaimName("roles");
 
         JwtAuthenticationConverter authConverter =

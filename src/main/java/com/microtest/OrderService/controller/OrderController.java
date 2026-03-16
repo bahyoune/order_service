@@ -1,70 +1,69 @@
 package com.microtest.OrderService.controller;
 
 
+import com.microtest.OrderService.exception.KafkaErrorPublishException;
 import com.microtest.event.OrderCreateEvent;
-import com.microtest.event.OrderEvent;
 import com.microtest.OrderService.service.OrderService;
-import com.microtest.OrderService.service.feign.OrderFeignService;
+import com.microtest.OrderService.service.OrderFeignService;
+import com.microtest.event.OrderEvent;
 import com.microtest.event.PaymentStatusEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/internal/v1/orders")
-@RefreshScope
 public class OrderController {
 
     @Autowired
     private OrderService orderService;
 
-    //old_clean_code: paymentFeignService
-    //new_clean_code: orderFeignService
     @Autowired
     private OrderFeignService orderFeignService;
 
-
-    //old_clean_code: keyFix
-    //new_clean_code: messageFix
     @Value("${custom.msg}")
     private String messageFix;
-
 
     //Test of Feign message without a circuit breaker
     //if productId = check, order placed : order cancel
     //Data is not persist in database
     //---------------------
-    //old_clean_code: createPayment
-    //new_clean_code: findOrderForProductExist
     //in Prod adding feign in not recommended
     // /{productId}/exist
-    @PostMapping("/feign/{productId}")
+    @GetMapping("/feign/{productId}")
     public String findOrderForProductExist(@PathVariable String productId) {
         return orderFeignService.findOrderForProductExist(productId);
     }
 
     //Feign message with circuit breaker, retry and time limiter
-    @GetMapping("/{id}/payment-status")
-    public CompletableFuture<PaymentStatusEvent> paymentStatus(@PathVariable Long id) {
-        return orderFeignService.getPaymentStatus(id);
+    @GetMapping("/{orderId}/payment-status")
+    public CompletableFuture<PaymentStatusEvent> paymentStatus(@PathVariable Long orderId) {
+       return orderFeignService.getPaymentStatus(orderId);
     }
-
-
 
 
     //Test for Kafka message is working
     //if orderId = 1, trigger DLT error
     //Data is not persist in database
     //-------------
-    //old_clean_code: sendEvent
-    //new_clean_code: publishOrderInKafka
     //in Prod replace /order with ""
     @PostMapping("/order")
-    public CompletableFuture<PaymentStatusEvent> publishOrderInKafka(@RequestBody OrderEvent msg) {
-      return   orderService.publishOrderInKafka(msg);
+    public ResponseEntity<?> publishOrderInKafka(@RequestBody OrderEvent msg) {
+        try {
+            PaymentStatusEvent result = orderService.publishOrderInKafka(msg);
+
+            return ResponseEntity.ok(result);
+        } catch (KafkaErrorPublishException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("Error", "The Service is not available to process Order"));
+        }
+
     }
 
     //Saga Pattern for Kafka
@@ -73,15 +72,18 @@ public class OrderController {
     //Payment failed, send an event to cancel the order
     //amount > 500 ? Payment confirm : Payment Failed
     //Data in database
-    //-------------
-    //old_clean_code: sendEvent
-    //new_clean_code: createOrderWithSagaPattern
-    //in Prod replace /saga with ""
     @PostMapping("/saga")
-    public CompletableFuture<PaymentStatusEvent> createOrderWithSagaPattern(@RequestBody OrderCreateEvent msg) {
-        return orderService.createOrderWithSagaPattern(msg.userId(), msg.amount());
+    public ResponseEntity<?> createOrderWithSagaPattern(@RequestBody OrderCreateEvent event) {
+        try {
+            PaymentStatusEvent result = orderService.createOrderWithSagaPattern(event);
+
+            return ResponseEntity.ok(result);
+        } catch (KafkaErrorPublishException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("Error", "The Service is not available to process Order"));
+        }
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     //Show fixed response
     @GetMapping("/msg")
     public String showMsg() {
